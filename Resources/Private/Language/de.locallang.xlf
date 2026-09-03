@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2">
+    <file source-language="en" target-language="de" datatype="plaintext" original="messages" product-name="bayernatlas_fluid">
+        <body>
+            <trans-unit id="map.ariaLabel"><source>BayernAtlas map</source><target>BayernAtlas-Karte</target></trans-unit>
+            <trans-unit id="map.layers"><source>Layers</source><target>Ebenen</target></trans-unit>
+            <trans-unit id="map.baseLayer"><source>Base map</source><target>Basiskarte</target></trans-unit>
+            <trans-unit id="map.categories"><source>Categories</source><target>Kategorien</target></trans-unit>
+            <trans-unit id="map.uncategorized"><source>Uncategorized</source><target>Ohne Kategorie</target></trans-unit>
+            <trans-unit id="map.loading"><source>Loading information...</source><target>Information wird geladen ...</target></trans-unit>
+            <trans-unit id="map.error"><source>The information could not be loaded.</source><target>Die Information konnte nicht geladen werden.</target></trans-unit>
+            <trans-unit id="map.closeInformation"><source>Close information</source><target>Information schließen</target></trans-unit>
+            <trans-unit id="map.informationDialog"><source>Map information</source><target>Karteninformation</target></trans-unit>
+            <trans-unit id="baseLayer.web"><source>Web map</source><target>Webkarte</target></trans-unit>
+            <trans-unit id="baseLayer.webGray"><source>Web map grayscale</source><target>Webkarte S/W</target></trans-unit>
+            <trans-unit id="baseLayer.aerial"><source>Aerial image with labels</source><target>Luftbild mit Beschriftung</target></trans-unit>
+            <trans-unit id="baseLayer.historic"><source>Historic map</source><target>Historische Karte</target></trans-unit>
+            <trans-unit id="baseLayer.topographic"><source>Topographic map</source><target>Topographische Karte</target></trans-unit>
+            <trans-unit id="baseLayer.vector"><source>Vector web map</source><target>Webkarte Vektor</target></trans-unit>
+            <trans-unit id="baseLayer.vectorGray"><source>Vector web map grayscale</source><target>Webkarte Vektor Grau</target></trans-unit>
+        </body>
+    </file>
+</xliff>

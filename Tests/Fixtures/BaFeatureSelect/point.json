@@ -1,0 +1,19 @@
+{
+  "features": [
+    {
+      "label": "Maximilianeum",
+      "properties": {
+        "id": "item-67"
+      },
+      "geometry": {
+        "type": "EWKT",
+        "srid": 4326,
+        "data": "SRID=4326;POINT(11.59452 48.13617)"
+      }
+    }
+  ],
+  "coordinate": [
+    11.59452,
+    48.13617
+  ]
+}

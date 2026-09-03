@@ -1,0 +1,50 @@
+{
+  "name": "elementareteilchen/bayernatlas-fluid",
+  "description": "Reusable TYPO3 Fluid component for the BayernAtlas web component",
+  "type": "typo3-cms-extension",
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://github.com/ElementareTeilchen/bayernatlas-fluid",
+  "support": {
+    "issues": "https://github.com/ElementareTeilchen/bayernatlas-fluid/issues",
+    "source": "https://github.com/ElementareTeilchen/bayernatlas-fluid"
+  },
+  "keywords": [
+    "TYPO3",
+    "Fluid",
+    "BayernAtlas",
+    "map"
+  ],
+  "require": {
+    "php": "^8.2",
+    "typo3/cms-core": "^13.4 || ^14.3",
+    "typo3/cms-fluid": "^13.4 || ^14.3",
+    "typo3fluid/fluid": "^4.3 || ^5.3.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "ElementareTeilchen\\BayernAtlasFluid\\": "Classes/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ElementareTeilchen\\BayernAtlasFluid\\Tests\\": "Tests/"
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.5 || ^12.5"
+  },
+  "scripts": {
+    "test:php": "phpunit"
+  },
+  "config": {
+    "allow-plugins": {
+      "typo3/class-alias-loader": true,
+      "typo3/cms-composer-installers": true
+    }
+  },
+  "extra": {
+    "typo3/cms": {
+      "extension-key": "bayernatlas_fluid"
+    }
+  }
+}

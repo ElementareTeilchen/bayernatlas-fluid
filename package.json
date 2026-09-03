@@ -1,0 +1,8 @@
+{
+  "name": "bayernatlas-fluid-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test Tests/JavaScript/BayernAtlas.test.mjs"
+  }
+}

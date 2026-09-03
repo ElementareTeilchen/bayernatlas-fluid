@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2">
+    <file source-language="en" datatype="plaintext" original="messages" product-name="bayernatlas_fluid">
+        <body>
+            <trans-unit id="map.ariaLabel"><source>BayernAtlas map</source></trans-unit>
+            <trans-unit id="map.layers"><source>Layers</source></trans-unit>
+            <trans-unit id="map.baseLayer"><source>Base map</source></trans-unit>
+            <trans-unit id="map.categories"><source>Categories</source></trans-unit>
+            <trans-unit id="map.uncategorized"><source>Uncategorized</source></trans-unit>
+            <trans-unit id="map.loading"><source>Loading information...</source></trans-unit>
+            <trans-unit id="map.error"><source>The information could not be loaded.</source></trans-unit>
+            <trans-unit id="map.closeInformation"><source>Close information</source></trans-unit>
+            <trans-unit id="map.informationDialog"><source>Map information</source></trans-unit>
+            <trans-unit id="baseLayer.web"><source>Web map</source></trans-unit>
+            <trans-unit id="baseLayer.webGray"><source>Web map grayscale</source></trans-unit>
+            <trans-unit id="baseLayer.aerial"><source>Aerial image with labels</source></trans-unit>
+            <trans-unit id="baseLayer.historic"><source>Historic map</source></trans-unit>
+            <trans-unit id="baseLayer.topographic"><source>Topographic map</source></trans-unit>
+            <trans-unit id="baseLayer.vector"><source>Vector web map</source></trans-unit>
+            <trans-unit id="baseLayer.vectorGray"><source>Vector web map grayscale</source></trans-unit>
+        </body>
+    </file>
+</xliff>

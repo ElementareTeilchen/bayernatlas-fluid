@@ -1,0 +1,20 @@
+{
+  "features": [
+    {
+      "label": "Route",
+      "properties": {
+        "itemId": "route-1",
+        "label": "Route"
+      },
+      "geometry": {
+        "type": "EWKT",
+        "srid": 4326,
+        "data": "SRID=4326;LINESTRING(11.5 48.1,11.6 48.2)"
+      }
+    }
+  ],
+  "coordinate": [
+    11.55,
+    48.15
+  ]
+}

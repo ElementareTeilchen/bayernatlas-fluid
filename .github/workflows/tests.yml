@@ -1,0 +1,52 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    env:
+      # A package checkout has no complete TYPO3 site to publish assets for.
+      TYPO3_SKIP_ASSET_PUBLISH: '1'
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.4']
+        typo3: ['^13.4', '^14.3']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: intl, mbstring, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - run: composer validate --strict
+      - run: composer update --with 'typo3/cms-core:${{ matrix.typo3 }}' --prefer-dist --no-interaction --no-progress
+      - run: composer test:php
+      - name: PHP and XLIFF syntax
+        run: |
+          find Classes Tests -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -r 'foreach (glob("Resources/Private/Language/*.xlf") as $file) { if (simplexml_load_file($file) === false) { exit(1); } }'
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - run: npm test
+      - run: node --check Resources/Public/JavaScript/BayernAtlas.js
+      - name: Verify distributable tests
+        run: |
+          mkdir /tmp/release-check
+          git archive HEAD | tar -x -C /tmp/release-check
+          cd /tmp/release-check
+          npm test

@@ -1,0 +1,61 @@
+<html lang="en"
+      xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:bafv="http://typo3.org/ns/ElementareTeilchen/BayernAtlasFluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:argument name="id"
+            type="string"
+            description="Unique map identifier."/>
+<f:argument name="items"
+            type="array"
+            description="Points and geometries rendered on the map."/>
+<f:argument name="configuration"
+            type="array"
+            description="BayernAtlas presentation configuration."/>
+
+<f:render partial="BayernAtlas/LoadAssets"/>
+<f:variable name="mapWidth"
+            value="{bafv:normalizeDimension(value: configuration.width, fallback: '100%')}"/>
+<f:variable name="mapHeight"
+            value="{bafv:normalizeDimension(value: configuration.height, fallback: '560px')}"/>
+
+<div id="bayernatlas-{id}"
+     class="bayernatlas-fluid"
+     style="width: {mapWidth}; height: {mapHeight};"
+     data-items="{items -> f:format.json()}"
+     data-configuration="{configuration -> f:format.json()}"
+     data-translation-aria-label="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:map.ariaLabel')}"
+     data-translation-uncategorized="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:map.uncategorized')}"
+     data-translation-loading="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:map.loading')}"
+     data-translation-error="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:map.error')}"
+     data-translation-base-layer-web="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:baseLayer.web')}"
+     data-translation-base-layer-web-gray="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:baseLayer.webGray')}"
+     data-translation-base-layer-aerial="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:baseLayer.aerial')}"
+     data-translation-base-layer-historic="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:baseLayer.historic')}"
+     data-translation-base-layer-topographic="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:baseLayer.topographic')}"
+     data-translation-base-layer-vector="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:baseLayer.vector')}"
+     data-translation-base-layer-vector-gray="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:baseLayer.vectorGray')}">
+    <details class="bayernatlas-fluid__layers" hidden>
+        <summary><f:translate key="LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:map.layers"/></summary>
+        <div class="bayernatlas-fluid__layers-content">
+            <label class="bayernatlas-fluid__base-layer">
+                <span><f:translate key="LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:map.baseLayer"/></span>
+                <select data-role="base-layer"></select>
+            </label>
+            <fieldset>
+                <legend><f:translate key="LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:map.categories"/></legend>
+                <div data-role="category-layers"></div>
+            </fieldset>
+        </div>
+    </details>
+    <aside class="bayernatlas-fluid__info"
+           role="dialog"
+           aria-label="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:map.informationDialog')}"
+           hidden>
+        <button class="bayernatlas-fluid__info-close"
+                type="button"
+                aria-label="{f:translate(key: 'LLL:EXT:bayernatlas_fluid/Resources/Private/Language/locallang.xlf:map.closeInformation')}">×</button>
+        <div class="bayernatlas-fluid__info-content"></div>
+    </aside>
+</div>
+</html>
