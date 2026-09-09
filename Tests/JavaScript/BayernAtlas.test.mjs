@@ -15,6 +15,7 @@ import {
   getItemCategoryKeys,
   getItemCoordinates,
   itemToFeature,
+  pointToKml,
   normalizeBoolean,
   normalizeCoordinate,
   normalizeDimension,
@@ -233,6 +234,7 @@ test('uses stable marker IDs and omits labels when labels are disabled', () => {
   const calls = [];
   const context = {
     configuration: { showLabels: '0' },
+    element: { ownerDocument: { baseURI: 'https://example.test/' } },
     map: {
       addMarker(coordinate, options) {
         calls.push({ coordinate, options });
@@ -282,6 +284,7 @@ test('resolves point and geometry selections from example BayernAtlas payloads',
 test('clears all markers owned by the BayernAtlas element in one call', () => {
   let clearCalls = 0;
   const context = {
+    pointLayers: [],
     map: {
       clearMarkers() {
         clearCalls += 1;
@@ -451,4 +454,38 @@ test('closes the information dialog with Escape', () => {
   });
 
   assert.deepEqual(calls, ['prevent', 'hide', 'clear']);
+});
+
+
+test('custom KML icons escape editorial data and preserve IDs, size and anchors', () => {
+  const kml = pointToKml({
+    id: 67, title: 'P & H <test>', coordinates: [12, 49],
+    icon: { url: '/icons/p.png?a=1&b=2', width: 30, height: 30,
+      originalWidth: 60, originalHeight: 60, anchorX: 15, anchorY: 30 },
+  }, 'https://example.test/visit');
+  assert.match(kml, /id="item-67"/);
+  assert.match(kml, /P &amp; H &lt;test&gt;/);
+  assert.match(kml, /https:\/\/example.test\/icons\/p.png\?a=1&amp;b=2/);
+  assert.match(kml, /<scale>0.5<\/scale>/);
+  assert.match(kml, /hotSpot x="0.5" y="0"/);
+  assert.equal(pointToKml({ coordinates: [12, 49], icon: { url: 'javascript:alert(1)' } }), null);
+  assert.equal(pointToKml({ coordinates: [12, 49] }), null);
+});
+
+test('icon layers use the regular selection handler and are removed before filtering', () => {
+  const removed = [];
+  const selected = [];
+  const context = {
+    pointLayers: ['icons-1'],
+    itemsById: new Map([['67', { id: 67 }]]),
+    selectItem: (item) => selected.push(item.id),
+    map: { clearMarkers() {}, removeLayer: (id) => removed.push(id) },
+  };
+  BayernAtlasMap.prototype.handleFeatureSelect.call(context, {
+    detail: { features: [{ properties: { id: 'item-67', name: 'Parkhaus' } }] },
+  });
+  BayernAtlasMap.prototype.clearPointMarkers.call(context);
+  assert.deepEqual(selected, [67]);
+  assert.deepEqual(removed, ['icons-1']);
+  assert.deepEqual(context.pointLayers, []);
 });

@@ -240,6 +240,48 @@ export function itemToFeature(item) {
   return null;
 }
 
+// KML supports image symbols while addMarker only supports the standard pin.
+export function pointToKml(item, baseUrl) {
+  const coordinate = normalizeCoordinate(item.coordinates);
+  if (!coordinate || !item.icon?.url) {
+    return null;
+  }
+
+  let url;
+  try {
+    url = new URL(item.icon.url, baseUrl);
+  } catch {
+    return null;
+  }
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    return null;
+  }
+
+  const xml = (value) => String(value).replace(/[<>&"']/g, (character) => ({
+    '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;',
+  }[character]));
+  const positive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
+  const ratios = [
+    [item.icon.width, item.icon.originalWidth],
+    [item.icon.height, item.icon.originalHeight],
+  ].filter(([target, original]) => positive(target) && positive(original))
+    .map(([target, original]) => Number(target) / Number(original));
+  const scale = ratios.length ? Math.min(...ratios) : 1;
+  const width = Number(item.icon.originalWidth) * scale;
+  const height = Number(item.icon.originalHeight) * scale;
+  // maps2 measures anchors from the top left; KML fractions start at the bottom left.
+  const anchorX = positive(item.icon.anchorX) && width > 0 ? Number(item.icon.anchorX) / width : 0.5;
+  const anchorY = positive(item.icon.anchorY) && height > 0 ? 1 - Number(item.icon.anchorY) / height : 0.5;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+<Placemark id="item-${xml(item.id)}"><name>${xml(item.title || '')}</name>
+<Style><IconStyle><scale>${scale}</scale><Icon><href>${xml(url.href)}</href></Icon>
+<hotSpot x="${anchorX}" y="${anchorY}" xunits="fraction" yunits="fraction"/>
+</IconStyle></Style><Point><coordinates>${coordinate.join(',')}</coordinates></Point>
+</Placemark></Document></kml>`;
+}
+
 export function createLayerOptions(configuration, color) {
   return {
     zoomToExtent: false,
@@ -277,6 +319,7 @@ export class BayernAtlasMap {
     );
     this.itemsById = new Map(this.items.map((item) => [String(item.id), item]));
     this.pointItems = [];
+    this.pointLayers = [];
     this.geometryLayers = [];
     this.categoryLayers = [];
     this.categoryVisibility = new Map();
@@ -371,6 +414,16 @@ export class BayernAtlasMap {
       return;
     }
 
+    const kml = pointToKml(item, this.element.ownerDocument.baseURI);
+    if (kml) {
+      const layerId = this.map.addLayer(kml, {
+        zoomToExtent: false,
+        displayFeatureLabels: false,
+      });
+      this.pointLayers.push(layerId);
+      return;
+    }
+
     const markerOptions = { id: `item-${String(item.id)}` };
 
     if (normalizeBoolean(this.configuration.showLabels, true) && item.title) {
@@ -389,6 +442,8 @@ export class BayernAtlasMap {
 
   clearPointMarkers() {
     this.map.clearMarkers();
+    this.pointLayers.forEach((id) => this.map.removeLayer(id));
+    this.pointLayers = [];
   }
 
   addGeometry(item) {
