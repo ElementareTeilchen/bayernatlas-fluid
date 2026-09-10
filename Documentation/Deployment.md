@@ -13,6 +13,9 @@ specific production site.
 - Allow the script and cross-origin iframe from `https://atlas.bayern.de` in the
   site's Content Security Policy. Check the browser's actual requests against
   the site's policy rather than allowing third-party hosts broadly.
+- For custom point icons, allow `https://services.atlas.bayern.de` in `img-src`
+  and make the icon files publicly reachable. Otherwise the points fall back to
+  standard markers.
 - Provide only trusted or sanitized HTML in `item.content`.
 - Test point, line, polygon and circle selection on the approved domain. Check
   multiple maps, layer switching, keyboard focus, Escape, mobile layout and resize.
@@ -40,8 +43,12 @@ automated PHP coverage.
 
 - The provider script is loaded from the unversioned `wc.js` URL. Test staging
   after upstream changes; the Composer version cannot pin that remote runtime.
-- The API requires a label for selectable point markers. `showLabels: 0` makes
-  point markers display-only. Supply a title when selection is required.
+- The marker API requires a label for selectable standard point markers.
+  `showLabels: 0` makes standard markers display-only. Custom icon points are
+  KML features and stay selectable without labels.
+- The icon check uses the provider's internal proxy URL, which is not part of
+  the documented WebComponent API. If the provider changes it, icon points fall
+  back to standard markers.
 - Clustering is not implemented. There is no Leaflet overlay or synthetic cluster
   marker layer.
 - The initial viewport uses the configured zoom and the center of the coordinate

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Custom point icons rendered as image symbols in one native KML layer.
+- Icons that the BayernAtlas proxy cannot fetch fall back to standard markers.
+- `showLabels` controls icon labels; icon points stay selectable without labels.
+
 ## 0.1.0 - 2026-09-03
 
 - Initial public release of the maps2-independent `baf:map` Fluid component.

@@ -32,6 +32,15 @@ icon: {
 }
 ```
 
+Relative URLs are resolved against the page URL. BayernAtlas fetches the image
+through its server-side proxy, so the URL must be publicly reachable. Points whose
+icon the proxy cannot deliver use the standard marker. See
+[Custom point icons](../README.md#custom-point-icons) for the check and the
+required Content Security Policy source.
+
+`showLabels` controls the icon labels. Icon points remain selectable without
+labels.
+
 The BayernAtlas renderer currently differs from maps2's Leaflet renderer in
 these cases:
 
