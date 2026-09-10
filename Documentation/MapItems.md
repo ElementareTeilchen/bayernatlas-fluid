@@ -15,6 +15,37 @@ common fields:
 
 A circle also needs a positive `radius` in metres.
 
+## Custom point icons
+
+A point can contain an `icon` array with the image URL, its configured display
+size, its original size and an anchor measured from the top left:
+
+```html
+icon: {
+    url: '/path/to/icon.svg',
+    width: 30,
+    height: 30,
+    originalWidth: 60,
+    originalHeight: 60,
+    anchorX: 15,
+    anchorY: 30
+}
+```
+
+The BayernAtlas renderer currently differs from maps2's Leaflet renderer in
+these cases:
+
+- An anchor coordinate of `0` is treated as unset. The renderer uses the image
+  centre for that coordinate, while Leaflet places `[0, 0]` at the top left.
+- If the original image dimensions are unavailable, the KML scale falls back
+  to `1`. The image then uses its native size instead of the configured width
+  and height. SVG files without stored dimensions can trigger this case.
+- KML offers one scale value for both axes. When the configured width and
+  height imply different scale factors, the renderer uses the smaller factor
+  and keeps the image's aspect ratio. Leaflet stretches the image to the exact
+  configured dimensions. The anchor is therefore calculated against a
+  different rendered box.
+
 ## Categories
 
 Each category has an `id`, a `title` and an optional numeric `sorting` value:
