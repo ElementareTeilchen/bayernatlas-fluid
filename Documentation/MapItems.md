@@ -44,8 +44,6 @@ labels.
 The BayernAtlas renderer currently differs from maps2's Leaflet renderer in
 these cases:
 
-- An anchor coordinate of `0` is treated as unset. The renderer uses the image
-  centre for that coordinate, while Leaflet places `[0, 0]` at the top left.
 - If the original image dimensions are unavailable, the KML scale falls back
   to `1`. The image then uses its native size instead of the configured width
   and height. SVG files without stored dimensions can trigger this case.

@@ -488,6 +488,35 @@ test('renders custom icons in one escaped KML document', () => {
   assert.equal(pointsToKml([{ coordinates: [12, 49] }], 'https://example.test/'), null);
 });
 
+test('preserves zero values in custom icon anchors', () => {
+  const icon = {
+    url: '/icons/p.png',
+    width: 30,
+    height: 30,
+    originalWidth: 60,
+    originalHeight: 60,
+  };
+  const topLeft = pointsToKml([{
+    id: 1,
+    coordinates: [12, 49],
+    icon: { ...icon, anchorX: 0, anchorY: 0 },
+  }], 'https://example.test/');
+  const leftCentre = pointsToKml([{
+    id: 2,
+    coordinates: [12, 49],
+    icon: { ...icon, anchorX: 0, anchorY: 15 },
+  }], 'https://example.test/');
+  const defaultCentre = pointsToKml([{
+    id: 3,
+    coordinates: [12, 49],
+    icon,
+  }], 'https://example.test/');
+
+  assert.match(topLeft, /hotSpot x="0" y="1"/);
+  assert.match(leftCentre, /hotSpot x="0" y="0\.5"/);
+  assert.match(defaultCentre, /hotSpot x="0\.5" y="0\.5"/);
+});
+
 test('checks icons through the BayernAtlas proxy', async () => {
   const images = [];
   const createImage = () => {

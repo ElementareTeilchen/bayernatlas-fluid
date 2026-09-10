@@ -318,9 +318,14 @@ function iconPlacemark(item, url) {
   const scale = ratios.length ? Math.min(...ratios) : 1;
   const width = Number(item.icon.originalWidth) * scale;
   const height = Number(item.icon.originalHeight) * scale;
+  const hasAnchor = (value) => value !== null
+    && value !== undefined
+    && String(value).trim() !== ''
+    && Number.isFinite(Number(value))
+    && Number(value) >= 0;
   // maps2 measures anchors from the top left; KML fractions start at the bottom left.
-  const anchorX = positive(item.icon.anchorX) && width > 0 ? Number(item.icon.anchorX) / width : 0.5;
-  const anchorY = positive(item.icon.anchorY) && height > 0 ? 1 - Number(item.icon.anchorY) / height : 0.5;
+  const anchorX = hasAnchor(item.icon.anchorX) && width > 0 ? Number(item.icon.anchorX) / width : 0.5;
+  const anchorY = hasAnchor(item.icon.anchorY) && height > 0 ? 1 - Number(item.icon.anchorY) / height : 0.5;
 
   return `<Placemark id="item-${escapeXml(item.id)}"><name>${escapeXml(item.title || '')}</name>
 <Style><IconStyle><scale>${scale}</scale><Icon><href>${escapeXml(url)}</href></Icon>
