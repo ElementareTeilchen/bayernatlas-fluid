@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   BASE_LAYER_OPTIONS,
+  ICON_PROXY_URL,
   ITEM_SELECT_EVENT,
   BayernAtlasMap,
   circleToPolygon,
@@ -18,6 +19,8 @@ import {
   normalizeBoolean,
   normalizeCoordinate,
   normalizeDimension,
+  pointsToKml,
+  probeIcon,
 } from '../../Resources/Public/JavaScript/BayernAtlas.js';
 
 test('package has no maps2 dependency', () => {
@@ -282,6 +285,7 @@ test('resolves point and geometry selections from example BayernAtlas payloads',
 test('clears all markers owned by the BayernAtlas element in one call', () => {
   let clearCalls = 0;
   const context = {
+    pointLayerId: null,
     map: {
       clearMarkers() {
         clearCalls += 1;
@@ -298,16 +302,21 @@ test('renders visible points directly as BayernAtlas markers', () => {
   const renderedItems = [];
   let clearCalls = 0;
   const context = {
+    pointsReady: true,
     pointItems: [{ id: 1 }, { id: 2 }],
     isItemVisible: (item) => item.id === 1,
+    hasAvailableIcon: () => false,
     clearPointMarkers() {
       clearCalls += 1;
     },
     addPoint(item) {
       renderedItems.push(item.id);
     },
+    addIconPoints() {},
   };
 
+  BayernAtlasMap.prototype.renderPointMarkers.call(context);
+  context.pointsReady = false;
   BayernAtlasMap.prototype.renderPointMarkers.call(context);
 
   assert.equal(clearCalls, 1);
@@ -451,4 +460,141 @@ test('closes the information dialog with Escape', () => {
   });
 
   assert.deepEqual(calls, ['prevent', 'hide', 'clear']);
+});
+
+test('renders custom icons in one escaped KML document', () => {
+  const icon = {
+    url: '/icons/p.png?a=1&b=2',
+    width: 30,
+    height: 30,
+    originalWidth: 60,
+    originalHeight: 60,
+    anchorX: 15,
+    anchorY: 30,
+  };
+  const kml = pointsToKml([
+    { id: 67, title: 'P & H <test>', coordinates: [12, 49], icon },
+    { id: 68, title: 'Bus', coordinates: [12.1, 49.1], icon },
+    { id: 69, coordinates: [12, 49], icon: { url: 'javascript:alert(1)' } },
+  ], 'https://example.test/visit');
+
+  assert.equal((kml.match(/<Placemark /g) || []).length, 2);
+  assert.match(kml, /id="item-67"/);
+  assert.match(kml, /id="item-68"/);
+  assert.match(kml, /P &amp; H &lt;test&gt;/);
+  assert.match(kml, /https:\/\/example\.test\/icons\/p\.png\?a=1&amp;b=2/);
+  assert.match(kml, /<scale>0\.5<\/scale>/);
+  assert.match(kml, /hotSpot x="0\.5" y="0"/);
+  assert.equal(pointsToKml([{ coordinates: [12, 49] }], 'https://example.test/'), null);
+});
+
+test('preserves zero values in custom icon anchors', () => {
+  const icon = {
+    url: '/icons/p.png',
+    width: 30,
+    height: 30,
+    originalWidth: 60,
+    originalHeight: 60,
+  };
+  const topLeft = pointsToKml([{
+    id: 1,
+    coordinates: [12, 49],
+    icon: { ...icon, anchorX: 0, anchorY: 0 },
+  }], 'https://example.test/');
+  const leftCentre = pointsToKml([{
+    id: 2,
+    coordinates: [12, 49],
+    icon: { ...icon, anchorX: 0, anchorY: 15 },
+  }], 'https://example.test/');
+  const defaultCentre = pointsToKml([{
+    id: 3,
+    coordinates: [12, 49],
+    icon,
+  }], 'https://example.test/');
+
+  assert.match(topLeft, /hotSpot x="0" y="1"/);
+  assert.match(leftCentre, /hotSpot x="0" y="0\.5"/);
+  assert.match(defaultCentre, /hotSpot x="0\.5" y="0\.5"/);
+});
+
+test('checks icons through the BayernAtlas proxy', async () => {
+  const images = [];
+  const createImage = () => {
+    const image = {};
+    images.push(image);
+
+    return image;
+  };
+
+  const loaded = probeIcon('https://example.test/p.png', createImage);
+  images[0].onload();
+  const failed = probeIcon('https://local.test/p.png', createImage);
+  images[1].onerror();
+  const timedOut = probeIcon('https://example.test/slow.png', createImage, 1);
+
+  assert.equal(
+    images[0].src,
+    `${ICON_PROXY_URL}?url=${encodeURIComponent('https://example.test/p.png')}`,
+  );
+  assert.deepEqual(await Promise.all([loaded, failed, timedOut]), [true, false, false]);
+});
+
+test('renders reachable icons as one layer and other points as markers', () => {
+  const markers = [];
+  const layers = [];
+  const icon = (name) => ({ url: `https://example.test/${name}.png` });
+  const context = Object.assign(Object.create(BayernAtlasMap.prototype), {
+    pointsReady: true,
+    pointLayerId: null,
+    configuration: { showLabels: '0' },
+    element: { ownerDocument: { baseURI: 'https://example.test/' } },
+    iconAvailability: new Map([
+      ['https://example.test/public.png', true],
+      ['https://example.test/private.png', false],
+    ]),
+    pointItems: [
+      { id: 1, coordinates: [12, 49], icon: icon('public') },
+      { id: 2, coordinates: [12.1, 49], icon: icon('public') },
+      { id: 3, coordinates: [12.2, 49], icon: icon('private') },
+      { id: 4, coordinates: [12.3, 49] },
+    ],
+    isItemVisible: () => true,
+    map: {
+      clearMarkers() {},
+      addMarker: (coordinate, options) => markers.push(options.id),
+      addLayer(data, options) {
+        layers.push({ data, options });
+
+        return 'icons';
+      },
+    },
+  });
+
+  context.renderPointMarkers();
+
+  assert.deepEqual(markers, ['item-3', 'item-4']);
+  assert.equal(layers.length, 1);
+  assert.equal((layers[0].data.match(/<Placemark /g) || []).length, 2);
+  assert.deepEqual(layers[0].options, { zoomToExtent: false, displayFeatureLabels: false });
+  assert.equal(context.pointLayerId, 'icons');
+});
+
+test('removes the icon layer before filtering and selects icon placemarks', () => {
+  const removed = [];
+  const selected = [];
+  const context = {
+    pointLayerId: 'icons',
+    itemsById: new Map([['67', { id: 67 }]]),
+    selectItem: (item) => selected.push(item.id),
+    map: { clearMarkers() {}, removeLayer: (id) => removed.push(id) },
+  };
+
+  BayernAtlasMap.prototype.handleFeatureSelect.call(context, {
+    detail: { features: [{ properties: { id: 'item-67', name: 'Parkhaus' } }] },
+  });
+  BayernAtlasMap.prototype.clearPointMarkers.call(context);
+
+  assert.deepEqual(selected, [67]);
+  assert.deepEqual(removed, ['icons']);
+  assert.equal(context.pointLayerId, null);
 });

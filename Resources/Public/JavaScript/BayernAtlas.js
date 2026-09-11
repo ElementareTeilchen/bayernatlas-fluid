@@ -240,6 +240,100 @@ export function itemToFeature(item) {
   return null;
 }
 
+// BayernAtlas loads every KML icon through this proxy. An icon the proxy cannot
+// fetch, e.g. on a local or password-protected host, stays invisible on the map.
+export const ICON_PROXY_URL = 'https://services.atlas.bayern.de/proxy';
+const ICON_PROBE_TIMEOUT_MS = 5000;
+
+export function resolveIconUrl(icon, baseUrl) {
+  if (!icon?.url) {
+    return null;
+  }
+
+  let url;
+  try {
+    url = new URL(icon.url, baseUrl);
+  } catch {
+    return null;
+  }
+
+  return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+}
+
+// Requests the icon through the proxy, as the map would, to choose icon or pin.
+export function probeIcon(url, createImage = () => new Image(), timeout = ICON_PROBE_TIMEOUT_MS) {
+  return new Promise((resolve) => {
+    const image = createImage();
+    const finish = (available) => {
+      clearTimeout(timer);
+      image.onload = null;
+      image.onerror = null;
+      resolve(available);
+    };
+    const timer = setTimeout(() => finish(false), timeout);
+
+    image.onload = () => finish(true);
+    image.onerror = () => finish(false);
+    image.src = `${ICON_PROXY_URL}?url=${encodeURIComponent(url)}`;
+  });
+}
+
+const escapeXml = (value) => String(value).replace(/[<>&"']/g, (character) => ({
+  '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;',
+}[character]));
+
+// KML supports image symbols while addMarker only supports the standard pin.
+// All icon points share one document, so BayernAtlas manages a single layer.
+export function pointsToKml(items, baseUrl) {
+  const placemarks = items
+    .map((item) => {
+      const url = resolveIconUrl(item.icon, baseUrl);
+
+      return url ? iconPlacemark(item, url) : '';
+    })
+    .filter(Boolean);
+
+  if (!placemarks.length) {
+    return null;
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+${placemarks.join('\n')}
+</Document></kml>`;
+}
+
+function iconPlacemark(item, url) {
+  const coordinate = normalizeCoordinate(item.coordinates);
+  if (!coordinate) {
+    return '';
+  }
+
+  const positive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
+  const ratios = [
+    [item.icon.width, item.icon.originalWidth],
+    [item.icon.height, item.icon.originalHeight],
+  ].filter(([target, original]) => positive(target) && positive(original))
+    .map(([target, original]) => Number(target) / Number(original));
+  const scale = ratios.length ? Math.min(...ratios) : 1;
+  const width = Number(item.icon.originalWidth) * scale;
+  const height = Number(item.icon.originalHeight) * scale;
+  const hasAnchor = (value) => value !== null
+    && value !== undefined
+    && String(value).trim() !== ''
+    && Number.isFinite(Number(value))
+    && Number(value) >= 0;
+  // maps2 measures anchors from the top left; KML fractions start at the bottom left.
+  const anchorX = hasAnchor(item.icon.anchorX) && width > 0 ? Number(item.icon.anchorX) / width : 0.5;
+  const anchorY = hasAnchor(item.icon.anchorY) && height > 0 ? 1 - Number(item.icon.anchorY) / height : 0.5;
+
+  return `<Placemark id="item-${escapeXml(item.id)}"><name>${escapeXml(item.title || '')}</name>
+<Style><IconStyle><scale>${scale}</scale><Icon><href>${escapeXml(url)}</href></Icon>
+<hotSpot x="${anchorX}" y="${anchorY}" xunits="fraction" yunits="fraction"/>
+</IconStyle></Style><Point><coordinates>${coordinate.join(',')}</coordinates></Point>
+</Placemark>`;
+}
+
 export function createLayerOptions(configuration, color) {
   return {
     zoomToExtent: false,
@@ -277,6 +371,9 @@ export class BayernAtlasMap {
     );
     this.itemsById = new Map(this.items.map((item) => [String(item.id), item]));
     this.pointItems = [];
+    this.pointLayerId = null;
+    this.pointsReady = false;
+    this.iconAvailability = new Map();
     this.geometryLayers = [];
     this.categoryLayers = [];
     this.categoryVisibility = new Map();
@@ -357,7 +454,11 @@ export class BayernAtlasMap {
       }
     });
 
-    this.renderPointMarkers();
+    // Points wait for the icon check so they do not switch from pins to icons.
+    this.loadIcons().then(() => {
+      this.pointsReady = true;
+      this.renderPointMarkers();
+    });
     this.map.addEventListener('baFeatureSelect', (event) => this.handleFeatureSelect(event));
 
     this.initializeLayerControl();
@@ -380,15 +481,57 @@ export class BayernAtlasMap {
     this.map.addMarker(coordinate, markerOptions);
   }
 
+  async loadIcons() {
+    const urls = new Set(this.pointItems
+      .map((item) => resolveIconUrl(item.icon, this.element.ownerDocument.baseURI))
+      .filter(Boolean));
+
+    await Promise.all([...urls].map(async (url) => {
+      this.iconAvailability.set(url, await probeIcon(url));
+    }));
+  }
+
+  hasAvailableIcon(item) {
+    const url = resolveIconUrl(item.icon, this.element.ownerDocument.baseURI);
+
+    return Boolean(url && this.iconAvailability.get(url));
+  }
+
   renderPointMarkers() {
+    if (!this.pointsReady) {
+      return;
+    }
+
     const visiblePointItems = this.pointItems.filter((item) => this.isItemVisible(item));
+    const iconItems = visiblePointItems.filter((item) => this.hasAvailableIcon(item));
     this.clearPointMarkers();
 
-    visiblePointItems.forEach((item) => this.addPoint(item));
+    visiblePointItems
+      .filter((item) => !iconItems.includes(item))
+      .forEach((item) => this.addPoint(item));
+    this.addIconPoints(iconItems);
+  }
+
+  addIconPoints(items) {
+    const kml = pointsToKml(items, this.element.ownerDocument.baseURI);
+
+    if (!kml) {
+      return;
+    }
+
+    this.pointLayerId = this.map.addLayer(kml, {
+      zoomToExtent: false,
+      displayFeatureLabels: normalizeBoolean(this.configuration.showLabels, true),
+    });
   }
 
   clearPointMarkers() {
     this.map.clearMarkers();
+
+    if (this.pointLayerId) {
+      this.map.removeLayer(this.pointLayerId);
+      this.pointLayerId = null;
+    }
   }
 
   addGeometry(item) {

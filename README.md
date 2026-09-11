@@ -115,12 +115,40 @@ a withdrawal control.
 | `center` | `[11.5, 48.8]` | Supplies the fallback center when the map has no valid item coordinates. |
 | `baseLayer` | `GEORESOURCE_WEB` | Selects the initial BayernAtlas base map. |
 | `ariaLabel` | `BayernAtlas-Karte` | Labels the map for assistive technology. |
-| `showLabels` | `1` | Shows marker and geometry labels. |
+| `showLabels` | `1` | Shows marker, icon and geometry labels. |
 | `showLayerControl` | `0` | Shows the base-map and category controls. |
 
-The current BayernAtlas API requires a label to make a point marker selectable.
-With `showLabels: 0`, points are display-only and do not open item details.
-Supply a non-empty item title and enable labels when point selection is needed.
+The current BayernAtlas marker API requires a label to make a standard point
+marker selectable. With `showLabels: 0`, standard markers are display-only and
+do not open item details. Points with a custom icon are rendered as KML and stay
+selectable without labels.
+
+## Custom point icons
+
+Points with an `icon` are rendered as image symbols in one KML layer. See
+[Map item format](Documentation/MapItems.md#custom-point-icons) for the fields.
+
+BayernAtlas does not load icon images from the visitor's browser. Its server
+fetches them through `https://services.atlas.bayern.de/proxy`, so an icon URL
+must be publicly reachable over HTTP(S) without authentication.
+
+Before it renders points, the component requests each distinct icon once through
+that proxy. If the proxy cannot deliver an icon within five seconds, the affected
+points use the standard marker instead. This covers local development hosts,
+password-protected staging sites and removed files.
+
+Allow the check in the site's Content Security Policy:
+
+```yaml
+- mode: extend
+  directive: 'img-src'
+  sources:
+    - 'https://services.atlas.bayern.de/'
+```
+
+Without this source, the browser blocks the check and every point falls back to
+the standard marker. The check runs only after the map has loaded. It sends the
+icon URLs to the same provider that renders the map.
 
 The renderer calculates the initial center from all item coordinates before it
 inserts the BayernAtlas element.
